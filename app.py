@@ -1043,8 +1043,8 @@ def check_password():
     st.markdown('<div class="auth-wrap"><div class="auth-box">', unsafe_allow_html=True)
     st.markdown(f"<h2>🔒 {title}</h2>", unsafe_allow_html=True)
     st.markdown('<p class="sub">Sign in to access the dashboard</p>', unsafe_allow_html=True)
-    user = st.text_input("", placeholder="Username", key="au")
-    pwd = st.text_input("", type="password", placeholder="Password", key="ap")
+    user = st.text_input("Username", placeholder="Username", key="au", label_visibility="collapsed")
+    pwd = st.text_input("Password", type="password", placeholder="Password", key="ap", label_visibility="collapsed")
     if st.button("Sign In", use_container_width=True, key="ab"):
         if user == st.secrets.get("auth", {}).get("username", "") and \
            pwd == st.secrets.get("auth", {}).get("password", ""):
