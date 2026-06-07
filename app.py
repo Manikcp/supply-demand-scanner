@@ -21,6 +21,7 @@ Usage:
 """
 
 import json
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -400,6 +401,66 @@ def scan_tickers(tickers: list, progress_bar, status_text=None) -> tuple:
     if all_signals:
         return pd.concat(all_signals, ignore_index=True), ohlcv_data, h1_data, daily_data, weekly_data
     return pd.DataFrame(), ohlcv_data, h1_data, daily_data, weekly_data
+
+
+def run_auto_scan():
+    """Run scan silently and send new active trades to Telegram."""
+    from scanner_base import get_index_type
+    from trade_journal import load_journal, check_open_trades
+    from telegram_notifier import send_message, format_trade_alert, already_sent, mark_sent
+
+    all_tickers = list(INDEX_TICKERS)
+    fno_file = os.path.join(os.path.dirname(__file__), "fno_tickers.csv")
+    if os.path.exists(fno_file):
+        try:
+            df = pd.read_csv(fno_file)
+            if "ticker" in df.columns:
+                all_tickers.extend(df["ticker"].dropna().tolist())
+        except Exception:
+            pass
+
+    all_signals = []
+    for ticker in all_tickers:
+        try:
+            df_5m = fetch_ohlcv(ticker, interval="5m", period=DATA_PERIOD)
+            if df_5m is None or len(df_5m) < MIN_ROWS:
+                continue
+            df_daily = fetch_ohlcv(ticker, interval="1d", period="1y")
+            df_weekly = fetch_ohlcv(ticker, interval="1wk", period="5y")
+            df_h1 = fetch_ohlcv(ticker, interval="1h", period="21d")
+            cfg = Config.from_json()
+            if ticker in INDEX_TICKERS:
+                cfg.use_vol_filt = False
+            cfg.index_type = get_index_type(ticker)
+            _, signals = run_signals(df_5m, df_daily, cfg, df_weekly, df_h1=df_h1)
+            if signals is not None and not signals.empty:
+                signals["ticker"] = ticker_label(ticker)
+                signals["symbol"] = ticker
+                all_signals.append(signals)
+        except Exception:
+            continue
+
+    if not all_signals:
+        return
+
+    signals_df = pd.concat(all_signals, ignore_index=True)
+    record_scan_signals(signals_df)
+    check_open_trades()
+
+    journal = load_journal()
+    sent = 0
+    for t in journal:
+        if t.get("status") != "open":
+            continue
+        if already_sent(t):
+            continue
+        msg = format_trade_alert(t)
+        if send_message(msg):
+            mark_sent(t)
+            sent += 1
+
+    if sent:
+        print(f"[AutoScan] Sent {sent} new trade(s) to Telegram")
 
 
 def _find_pivots(series: pd.Series, window: int = 5):
@@ -1164,6 +1225,37 @@ if main_tab == "Scanner":
     scan_button = col_scan.button("Run Scan", type="primary")
     cancel_button = col_cancel.button("Cancel")
     batch_button = col_batch.button("Next Batch")
+
+    st.sidebar.divider()
+    auto_on = st.sidebar.checkbox("🔄 Auto-Scan (every 15 min)", key="auto_scan_on",
+                                  help="Automatically scans every 15 min during market hours (9:15-15:30 IST)")
+    if auto_on:
+        last = st.session_state.get("auto_last_scan", None)
+        count = st.session_state.get("auto_scan_count", 0)
+        now = datetime.now(IST)
+        in_market = 9 * 60 + 15 <= now.hour * 60 + now.minute <= 15 * 60 + 30 and now.weekday() < 5
+        if last:
+            elapsed = (now - datetime.fromisoformat(last)).total_seconds()
+            next_in = max(0, 900 - int(elapsed))
+            st.sidebar.caption(f"Last scan: {last[-8:]} | Next: ~{next_in//60}m{next_in%60}s")
+        st.sidebar.caption(f"Today's scans: {count}" + (" 🟢 Market open" if in_market else " 🔴 Market closed"))
+
+        last_scan = st.session_state.get("auto_last_scan_dt", None)
+        should_scan = False
+        if last_scan is None:
+            should_scan = True
+        else:
+            elapsed = (datetime.now() - last_scan).total_seconds()
+            if elapsed >= 900:
+                should_scan = True
+
+        if should_scan and in_market:
+            st.session_state.auto_last_scan_dt = datetime.now()
+            st.session_state.auto_last_scan = datetime.now(IST).isoformat()
+            st.session_state.auto_scan_count = st.session_state.get("auto_scan_count", 0) + 1
+            run_auto_scan()
+
+        st.markdown(f'<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
     
     if cancel_button:
         st.session_state.scan_cancelled = True
