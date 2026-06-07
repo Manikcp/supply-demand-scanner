@@ -11,7 +11,7 @@ import pandas as pd
 from scanner_base import fetch_ohlcv, ticker_label, INDEX_TICKERS
 from strategies.sr_levels import get_all_sr_levels, detect_market_structure
 from strategies.supply_demand_v2 import Config
-import pandas_ta as ta
+from strategies.ta_helpers import atr as _atr
 
 
 def get_sr_for_ticker(ticker: str) -> dict:
@@ -28,7 +28,7 @@ def get_sr_for_ticker(ticker: str) -> dict:
     prev_close = df_15m["close"].iloc[-2] if len(df_15m) > 1 else current_price
     change_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
     
-    atr = ta.atr(df_15m["high"], df_15m["low"], df_15m["close"], length=14)
+    atr = _atr(df_15m["high"], df_15m["low"], df_15m["close"], 14)
     avg_atr = atr.iloc[-1] if atr is not None and not atr.empty else current_price * 0.01
     
     market_structure = detect_market_structure(df_15m)

@@ -14,7 +14,7 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+from strategies.ta_helpers import atr as _atr, ema as _ema
 
 
 class MarketStructure(Enum):
@@ -49,7 +49,7 @@ class SRLevel:
 def calculate_atr(df: pd.DataFrame, period: int = 14) -> float:
     if len(df) < period:
         return (df["high"] - df["low"]).mean()
-    atr = ta.atr(df["high"], df["low"], df["close"], length=period)
+    atr = _atr(df["high"], df["low"], df["close"], period)
     return atr.iloc[-1] if atr is not None and not atr.empty else (df["high"] - df["low"]).mean()
 
 
@@ -86,8 +86,8 @@ def detect_market_structure(df: pd.DataFrame, lookback: int = 50) -> MarketStruc
     bullish_score = (hh_count + hl_count) / total_swings
     bearish_score = (lh_count + ll_count) / total_swings
     
-    ema_20 = ta.ema(pd.Series(closes), length=20)
-    ema_50 = ta.ema(pd.Series(closes), length=50)
+    ema_20 = _ema(pd.Series(closes), 20)
+    ema_50 = _ema(pd.Series(closes), 50)
     
     if len(ema_20) > 0 and len(ema_50) > 0:
         trend_strength = (ema_20.iloc[-1] - ema_50.iloc[-1]) / ema_50.iloc[-1]

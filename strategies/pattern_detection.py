@@ -14,7 +14,7 @@ from typing import Optional, List, Tuple
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+from strategies.ta_helpers import atr as _atr
 
 
 class PatternType(Enum):
@@ -60,7 +60,7 @@ class Pattern:
 
 
 def calculate_atr(df: pd.DataFrame, period: int = 14) -> float:
-    atr = ta.atr(df["high"], df["low"], df["close"], length=period)
+    atr = _atr(df["high"], df["low"], df["close"], period)
     return atr.iloc[-1] if atr is not None and not atr.empty else df["close"].iloc[-1] * 0.02
 
 

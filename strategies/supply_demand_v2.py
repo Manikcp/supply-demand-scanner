@@ -37,7 +37,8 @@ from enum import Enum
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta
+
+from strategies.ta_helpers import ema as _ema, atr as _atr
 
 
 class SignalType(Enum):
@@ -509,11 +510,11 @@ def run_signals(df_15m: pd.DataFrame, df_daily: Optional[pd.DataFrame],
         return s
 
     df["atr"] = _safe_series(
-        ta.atr(df["high"], df["low"], df["close"], length=cfg.atr_len), df.index
+        _atr(df["high"], df["low"], df["close"], cfg.atr_len), df.index
     )
     df["atr"] = df["atr"].fillna(df["close"] * 0.01)
 
-    df["ema"] = _safe_series(ta.ema(df["close"], length=cfg.ema_len), df.index)
+    df["ema"] = _safe_series(_ema(df["close"], cfg.ema_len), df.index)
 
     df["session_ok"], df["session"] = zip(*df.index.to_series().apply(is_trading_session))
 
@@ -533,7 +534,7 @@ def run_signals(df_15m: pd.DataFrame, df_daily: Optional[pd.DataFrame],
     if cfg.use_h1_zones and df_h1 is not None:
         df_h1c = df_h1.copy()
         atr_h1 = _safe_series(
-            ta.atr(df_h1c["high"], df_h1c["low"], df_h1c["close"], length=cfg.atr_len),
+            _atr(df_h1c["high"], df_h1c["low"], df_h1c["close"], cfg.atr_len),
             df_h1c.index
         )
         atr_h1 = atr_h1.fillna(df_h1c["close"] * 0.01)

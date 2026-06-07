@@ -1534,13 +1534,13 @@ elif main_tab == "S/R Levels":
                 df_weekly = fetch_ohlcv(ticker, interval="1wk", period="2y")
                 
                 if df_5m is not None and len(df_5m) >= MIN_ROWS:
-                    import pandas_ta as ta
+                    from strategies.ta_helpers import atr as _atr
                     
                     current_price = float(df_5m["close"].iloc[-1])
                     prev_close = float(df_5m["close"].iloc[-2]) if len(df_5m) > 1 else current_price
                     change_pct = ((current_price - prev_close) / prev_close * 100) if prev_close > 0 else 0
                     
-                    atr_series = ta.atr(df_5m["high"], df_5m["low"], df_5m["close"], length=14)
+                    atr_series = _atr(df_5m["high"], df_5m["low"], df_5m["close"], 14)
                     avg_atr = float(atr_series.iloc[-1]) if atr_series is not None and len(atr_series) > 0 else current_price * 0.01
                     
                     market_structure = detect_market_structure(df_5m)

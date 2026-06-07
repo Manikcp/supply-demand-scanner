@@ -1,7 +1,5 @@
 pandas
-pandas-ta
 yfinance
 numpy
 streamlit
 plotly
-pytest
