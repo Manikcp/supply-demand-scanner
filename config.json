@@ -1,0 +1,105 @@
+{
+  "general": {
+    "trading_capital": 100000,
+    "risk_per_trade_percent": 1.5,
+    "max_positions_per_day": 3,
+    "min_reward_risk_ratio": 1.0,
+    "max_loss_per_day_percent": 5.0,
+    "min_score_threshold": 50,
+    "require_trend_factor": true,
+    "block_opening_session": true,
+    "sl_atr_buffer": 0.5,
+    "dedup_bar_cooldown": 5,
+    "zone_atr_width": 1.5,
+    "target_rr": 1.5
+  },
+  "supply_demand": {
+    "min_impulse_candles": 3,
+    "impulse_body_mult": 1.3,
+    "fvg_min_gap_atr": 0.3,
+    "slow_momentum_max_body_pct": 0.4,
+    "trend_swing_lookback": 48,
+    "use_h1_zones": true,
+    "body_based_zones": true,
+    "next_bar_entry": false
+  },
+  "market_selection": {
+    "min_volume": 500000,
+    "min_open_interest": 100000,
+    "min_avg_daily_volume": 1000000,
+    "max_spread_percent": 0.5,
+    "price_range_min": 100,
+    "price_range_max": 5000
+  },
+  "technical_indicators": {
+    "rsi": {
+      "period": 14,
+      "oversold": 40,
+      "overbought": 60
+    },
+    "ema": {
+      "period": 20
+    },
+    "supertrend": {
+      "period": 10,
+      "multiplier": 2.0
+    }
+  },
+  "expiry_selection": {
+    "prefer_weekly": true,
+    "days_to_expiry_min": 2,
+    "days_to_expiry_max": 7,
+    "fallback_days_to_expiry": 14,
+    "liquidity_weight": 0.4,
+    "theta_decay_weight": 0.3,
+    "gamma_weight": 0.3
+  },
+  "nse_stocks": {
+    "fno_enabled": [
+      "RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK",
+      "SBIN", "BHARTIARTL", "HCLTECH", "LICI", "BAJFINANCE",
+      "TITAN", "SUNPHARMA", "WIPRO", "MARUTI", "TATAMOTORS",
+      "AXISBANK", "NTPC", "POWERGRID", "COALINDIA", "ONGC",
+      "GRASIM", "JSWSTEEL", "TATASTEEL", "HINDALCO", "JSWENERGY",
+      "ADANIENSOL", "ADANIPORTS", "SBILIFE", "M&M", "ULTRACEMCO",
+      "NESTLEIND", "BRITANNIA", "CIPLA", "DRREDDY", "BAJAJFINSV",
+      "SHRIRAMFIN", "INDUSINDBK", "EICHERMOT", "BPCL", "IOC",
+      "HEROMOTOCO", "ASIANPAINT", "DABUR", "DIVISLAB", "PIDILITIND",
+      "GODREJCP", "MARICO", "COLPAL", "HAVELLS"
+    ]
+  },
+  "indices": {
+    "enabled": [
+      "NIFTY 50",
+      "NIFTY BANK",
+      "NIFTY FIN SERVICE",
+      "NIFTY MIDCAP",
+      "NIFTY NEXT 50"
+    ]
+  },
+  "timeframes": {
+    "primary": "5min",
+    "confirmation": "5min",
+    "entry": "5min"
+  },
+  "data_source": {
+    "provider": "yfinance",
+    "lookback_days": 7,
+    "cache_enabled": true,
+    "cache_directory": "data_cache"
+  },
+  "output": {
+    "format": "text",
+    "include_charts": false,
+    "save_to_file": true,
+    "filename_pattern": "trading_plan_YYYYMMDD.txt"
+  },
+  "alerts": {
+    "sound_enabled": true,
+    "console_alerts": true,
+    "large_move_threshold": 10,
+    "level_hit_alert": true,
+    "trail_alert": true,
+    "stop_alert": true
+  }
+}

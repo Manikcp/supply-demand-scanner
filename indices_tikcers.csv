@@ -1,0 +1,10 @@
+name,ticker,strike_step
+Nifty 50,^NSEI,50
+BankNifty,^NSEBANK,100
+Sensex,^BSESN,100
+FinNifty,NIFTY_FIN_SERVICE.NS,50
+Nifty Mid Cap Select,NIFTY_MID_SELECT.NS,100
+NiftyJr,^NSENXT50,100
+Bankex,BANKEX.BO,100
+GIFT Nifty,GIFTNIFTY.NS,50
+India VIX,^INDIAVIX,
