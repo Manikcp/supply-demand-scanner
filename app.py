@@ -1102,13 +1102,18 @@ if not st.session_state.auth_ok:
         _err = st.empty()
         user = st.text_input("Username", placeholder="Username", key="au", label_visibility="collapsed")
         pwd = st.text_input("Password", type="password", placeholder="Password", key="ap", label_visibility="collapsed")
-        if st.button("Sign In", key="ab", use_container_width=True):
-            if user == st.secrets.get("auth", {}).get("username", "") and \
-               pwd == st.secrets.get("auth", {}).get("password", ""):
-                st.session_state.auth_ok = True
-                st.rerun()
-            else:
-                _err.error("✗ Invalid credentials")
+    try:
+        auth_user = st.secrets.get("auth", {}).get("username", "")
+        auth_pass = st.secrets.get("auth", {}).get("password", "")
+    except Exception:
+        auth_user = os.environ.get("AUTH_USERNAME", "")
+        auth_pass = os.environ.get("AUTH_PASSWORD", "")
+    if st.button("Sign In", key="ab", use_container_width=True):
+        if user == auth_user and pwd == auth_pass:
+            st.session_state.auth_ok = True
+            st.rerun()
+        else:
+            _err.error("✗ Invalid credentials")
     st.stop()
 
 st.markdown("""

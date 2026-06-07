@@ -4,3 +4,5 @@ __pycache__/
 .env
 data_cache/
 data/
+.streamlit/
+sent_trades.json

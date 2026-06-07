@@ -15,6 +15,25 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 SENT_FILE = os.path.join(os.path.dirname(__file__), "sent_trades.json")
 
+_ST_SECRETS = None
+try:
+    import streamlit as st
+    _ST_SECRETS = st.secrets
+except Exception:
+    pass
+
+
+def _get_telegram_config() -> tuple:
+    if _ST_SECRETS is not None:
+        try:
+            token = _ST_SECRETS.get("telegram", {}).get("bot_token", "")
+            chat_id = _ST_SECRETS.get("telegram", {}).get("chat_id", "")
+            if token and chat_id:
+                return token, chat_id
+        except Exception:
+            pass
+    return os.environ.get("TELEGRAM_BOT_TOKEN", ""), os.environ.get("TELEGRAM_CHAT_ID", "")
+
 
 def _load_sent() -> list:
     if not os.path.exists(SENT_FILE):
@@ -49,8 +68,7 @@ def mark_sent(trade: dict):
 
 
 def send_message(text: str) -> bool:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    token, chat_id = _get_telegram_config()
     if not token or not chat_id:
         print("[Telegram] BOT_TOKEN or CHAT_ID not set")
         return False
