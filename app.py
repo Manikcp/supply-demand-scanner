@@ -28,7 +28,6 @@ import yfinance as yf
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import contextlib
-import hashlib
 import io
 import time
 import warnings
@@ -1016,46 +1015,22 @@ def run_quick_backtest(signals_df: pd.DataFrame, ohlcv_data: dict) -> dict:
 st.set_page_config(page_title="Combined Strategy", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
 
 # ─── Auth Gate ────────────────────────────────────────────────
-def check_password():
-    title = st.secrets.get("auth", {}).get("title", "Supply & Demand Scanner")
-    if "auth_ok" in st.session_state and st.session_state.auth_ok:
-        return True
-    st.markdown("""
-        <style>
-        .auth-wrap { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center;
-            justify-content: center; background: #0a0b16; }
-        .auth-box { width: 380px; padding: 44px 36px 36px; border-radius: 20px;
-            background: linear-gradient(145deg, #13142a, #1a1b35); border: 1px solid #2a2b55; }
-        .auth-box h2 { margin: 0 0 4px; color: #f0f0ff; font-size: 22px; text-align: center; }
-        .auth-box .sub { color: #7878aa; font-size: 13px; text-align: center; margin: 0 0 28px; }
-        .auth-box input { width: 100%; padding: 11px 14px; border-radius: 10px; border: 1px solid #2a2b55;
-            background: #0e0f20; color: #e0e0ff; font-size: 14px; outline: none; margin-bottom: 14px;
-            box-sizing: border-box; }
-        .auth-box input:focus { border-color: #5a5aff; }
-        .auth-box button { width: 100%; padding: 11px; border-radius: 10px;
-            background: linear-gradient(135deg, #4a4aff, #6a3aff); color: white; border: none;
-            font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
-        .auth-box .err { background: rgba(255,60,60,0.12); border: 1px solid rgba(255,60,60,0.35);
-            color: #ff6b6b; padding: 8px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px;
-            text-align: center; }
-        </style>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="auth-wrap"><div class="auth-box">', unsafe_allow_html=True)
-    st.markdown(f"<h2>🔒 {title}</h2>", unsafe_allow_html=True)
-    st.markdown('<p class="sub">Sign in to access the dashboard</p>', unsafe_allow_html=True)
-    user = st.text_input("Username", placeholder="Username", key="au", label_visibility="collapsed")
-    pwd = st.text_input("Password", type="password", placeholder="Password", key="ap", label_visibility="collapsed")
-    if st.button("Sign In", use_container_width=True, key="ab"):
-        if user == st.secrets.get("auth", {}).get("username", "") and \
-           pwd == st.secrets.get("auth", {}).get("password", ""):
-            st.session_state.auth_ok = True
-            st.rerun()
-        else:
-            st.markdown('<div class="err">✗ Invalid credentials</div>', unsafe_allow_html=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
-    return False
+if "auth_ok" not in st.session_state:
+    st.session_state.auth_ok = False
 
-if not check_password():
+if not st.session_state.auth_ok:
+    st.markdown("## 🔒 Access Restricted")
+    st.markdown("Enter credentials to continue.")
+    with st.form("login_form"):
+        user = st.text_input("Username")
+        pwd = st.text_input("Password", type="password")
+        if st.form_submit_button("Sign In", use_container_width=True):
+            if user == st.secrets.get("auth", {}).get("username", "") and \
+               pwd == st.secrets.get("auth", {}).get("password", ""):
+                st.session_state.auth_ok = True
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
     st.stop()
 
 st.markdown("""
