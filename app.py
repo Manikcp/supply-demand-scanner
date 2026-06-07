@@ -1019,44 +1019,35 @@ if "auth_ok" not in st.session_state:
     st.session_state.auth_ok = False
 
 if not st.session_state.auth_ok:
-    hide_all = """
+    st.markdown("""
         <style>
+        html, body, .stApp { background: #0a0b16 !important; }
         header, #stDecoration, .stDeployButton, .stAppDeployButton,
         [data-testid="stHeader"], [data-testid="stToolbar"],
         [data-testid="stDecoration"], [data-testid="stStatusWidget"],
-        [data-testid="stSidebar"], .eczjsme10, .eczjsme11,
-        .stApp > header, .main > div:first-child > div:first-child > div:first-child > div:first-child
-        { display: none !important; }
+        [data-testid="stSidebar"] { display: none !important; }
         .main, .block-container, .stApp { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-        .stApp { background: #0a0b16 !important; }
-        .stForm { background: transparent !important; border: none !important; padding: 0 !important; }
-        .stTextInput > div > div > input { background: #0e0f20 !important; border: 1px solid #2a2b55 !important; border-radius: 10px !important; color: #e0e0ff !important; padding: 11px 14px !important; font-size: 14px !important; }
-        .stTextInput > div > div > input:focus { border-color: #5a5aff !important; }
-        .stButton > button { width: 100% !important; padding: 12px !important; border-radius: 10px !important; background: linear-gradient(135deg, #4a4aff, #6a3aff) !important; color: white !important; border: none !important; font-size: 15px !important; font-weight: 600 !important; margin-top: 8px !important; }
-        .stButton > button:hover { opacity: 0.9 !important; }
-        .stException, .stAlert { display: none !important; }
+        section[data-testid="stSidebar"] { display: none !important; }
+        .stTextInput input { background:#0e0f20 !important;border:1px solid #2a2b55 !important;border-radius:10px !important;color:#e0e0ff !important;padding:11px 14px !important; }
+        .stTextInput input:focus { border-color:#5a5aff !important; }
+        .stButton button { width:100% !important;padding:12px !important;border-radius:10px !important;background:linear-gradient(135deg,#4a4aff,#6a3aff) !important;color:white !important;border:none !important;font-size:15px !important;font-weight:600 !important; }
         </style>
-        <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0a0b16;z-index:99999">
-        <div style="width:380px;padding:44px 36px 24px;border-radius:20px;background:linear-gradient(145deg,#13142a,#1a1b35);border:1px solid #2a2b55">
-        <h2 style="margin:0;color:#f0f0ff;font-size:24px;font-weight:700;text-align:center">🔒 Supply &amp; Demand Scanner</h2>
-        <p style="color:#7878aa;font-size:13px;margin:6px 0 24px;text-align:center">Sign in to access the dashboard</p>
-    """
-    st.markdown(hide_all, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    with st.form("login_form", clear_on_submit=False):
-        user = st.text_input("Username", placeholder="Username", label_visibility="collapsed")
-        pwd = st.text_input("Password", type="password", placeholder="Password", label_visibility="collapsed")
-        submitted = st.form_submit_button("Sign In", use_container_width=True)
-
-    if submitted:
-        if user == st.secrets.get("auth", {}).get("username", "") and \
-           pwd == st.secrets.get("auth", {}).get("password", ""):
-            st.session_state.auth_ok = True
-            st.rerun()
-        else:
-            st.markdown('<p style="background:rgba(255,60,60,0.12);border:1px solid rgba(255,60,60,0.35);color:#ff6b6b;padding:8px 12px;border-radius:8px;font-size:13px;text-align:center">✗ Invalid credentials</p>', unsafe_allow_html=True)
-
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+    with col2:
+        st.markdown("<h2 style='color:#f0f0ff;font-size:22px;text-align:center;margin:60px 0 4px;font-weight:700'>🔒 Supply & Demand Scanner</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#7878aa;font-size:13px;text-align:center;margin:0 0 24px'>Sign in to access the dashboard</p>", unsafe_allow_html=True)
+        _err = st.empty()
+        user = st.text_input("Username", placeholder="Username", key="au", label_visibility="collapsed")
+        pwd = st.text_input("Password", type="password", placeholder="Password", key="ap", label_visibility="collapsed")
+        if st.button("Sign In", key="ab", use_container_width=True):
+            if user == st.secrets.get("auth", {}).get("username", "") and \
+               pwd == st.secrets.get("auth", {}).get("password", ""):
+                st.session_state.auth_ok = True
+                st.rerun()
+            else:
+                _err.error("✗ Invalid credentials")
     st.stop()
 
 st.markdown("""
