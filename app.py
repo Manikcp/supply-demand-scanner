@@ -23,6 +23,7 @@ Usage:
 import json
 import os
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import numpy as np
 import yfinance as yf
@@ -1260,7 +1261,7 @@ if main_tab == "Scanner":
             st.session_state.auto_scan_count = st.session_state.get("auto_scan_count", 0) + 1
             run_auto_scan()
 
-        st.markdown(f'<meta http-equiv="refresh" content="60">', unsafe_allow_html=True)
+        st_autorefresh(interval=60000, key="auto_refresh")
     
     if cancel_button:
         st.session_state.scan_cancelled = True
