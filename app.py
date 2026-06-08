@@ -169,18 +169,6 @@ if "scan_cancelled" not in st.session_state:
     st.session_state.scan_cancelled = False
 if "scanning" not in st.session_state:
     st.session_state.scanning = False
-if "current_batch" not in st.session_state:
-    st.session_state.current_batch = 0
-if "batch_signals" not in st.session_state:
-    st.session_state.batch_signals = []
-if "batch_ohlcv" not in st.session_state:
-    st.session_state.batch_ohlcv = {}
-if "batch_h1" not in st.session_state:
-    st.session_state.batch_h1 = {}
-if "batch_daily" not in st.session_state:
-    st.session_state.batch_daily = {}
-if "batch_weekly" not in st.session_state:
-    st.session_state.batch_weekly = {}
 
 
 def load_config() -> dict:
@@ -1244,12 +1232,9 @@ if main_tab == "Scanner":
     st.sidebar.divider()
     show_chart_bars = st.sidebar.slider("Chart Bars", 50, 200, 100, 10)
     
-    batch_size = st.sidebar.select_slider("Batch Size", options=[10, 25, 50, 100, 250], value=50, help="Smaller batches = more responsive UI")
-    
-    col_scan, col_cancel, col_batch = st.sidebar.columns(3)
+    col_scan, col_cancel = st.sidebar.columns(2)
     scan_button = col_scan.button("Run Scan", type="primary")
     cancel_button = col_cancel.button("Cancel")
-    batch_button = col_batch.button("Next Batch")
 
     st.sidebar.divider()
     auto_on = st.sidebar.checkbox("🔄 Auto-Scan (every 15 min)", key="auto_scan_on",
@@ -1290,111 +1275,61 @@ if main_tab == "Scanner":
     if cancel_button:
         st.session_state.scan_cancelled = True
         st.session_state.scanning = False
-        st.session_state.current_batch = 0
         st.rerun()
-    
+
     if scan_button:
         st.session_state.scan_cancelled = False
         st.session_state.scanning = True
-        st.session_state.current_batch = 0
-        st.session_state.batch_signals = []
-        st.session_state.batch_ohlcv = {}
-        st.session_state.batch_daily = {}
-        st.session_state.batch_weekly = {}
-    
-    if scan_button or batch_button:
-        if batch_button and not st.session_state.get("scanning", False):
-            st.warning("Click 'Run Scan' first to start scanning")
-        else:
-            try:
-                if ticker_source == "All FNO + Indices":
-                    fno_tickers = load_tickers(TICKERS_FILE)
-                    indices = load_indices(INDICES_FILE)
-                    all_tickers = indices + fno_tickers
-                elif ticker_source == "Indices Only":
-                    all_tickers = load_indices(INDICES_FILE)
+        try:
+            if ticker_source == "All FNO + Indices":
+                fno_tickers = load_tickers(TICKERS_FILE)
+                indices = load_indices(INDICES_FILE)
+                all_tickers = indices + fno_tickers
+            elif ticker_source == "Indices Only":
+                all_tickers = load_indices(INDICES_FILE)
+            else:
+                all_tickers = custom_tickers
+                if custom_tickers:
+                    st.sidebar.caption(f"Custom scan: {len(custom_tickers)} ticker(s)")
                 else:
-                    all_tickers = custom_tickers
-                    if custom_tickers:
-                        st.sidebar.caption(f"Custom scan: {len(custom_tickers)} ticker(s)")
-                    else:
-                        st.sidebar.warning("Select tickers from the list above")
+                    st.sidebar.warning("Select tickers from the list above")
 
-                if not all_tickers:
-                    st.error("No tickers to scan!")
-                else:
-                    current_batch = st.session_state.get("current_batch", 0)
-                    start_idx = current_batch * batch_size
-                    end_idx = min(start_idx + batch_size, len(all_tickers))
-                    tickers = all_tickers[start_idx:end_idx]
-                    
-                    if start_idx >= len(all_tickers):
-                        st.success("All tickers scanned!")
-                        st.session_state.scanning = False
-                    else:
-                        status_placeholder = st.empty()
-                        status_placeholder.info(f"Batch {current_batch + 1}: Scanning {start_idx + 1}-{end_idx} of {len(all_tickers)} tickers")
-                        progress_bar = st.progress(0, text="Starting batch...")
-                        start_time = datetime.now()
+            if not all_tickers:
+                st.error("No tickers to scan!")
+            else:
+                status_placeholder = st.empty()
+                status_placeholder.info(f"Scanning {len(all_tickers)} tickers...")
+                progress_bar = st.progress(0, text="Starting scan...")
+                start_time = datetime.now()
 
-                        result = scan_tickers(tickers, progress_bar, status_placeholder)
-                        signals_df, ohlcv_data, h1_data, daily_data, weekly_data = result
-                        elapsed = (datetime.now() - start_time).total_seconds()
+                result = scan_tickers(all_tickers, progress_bar, status_placeholder)
+                signals_df, ohlcv_data, h1_data, daily_data, weekly_data = result
+                elapsed = (datetime.now() - start_time).total_seconds()
 
-                        batch_signals = st.session_state.get("batch_signals", [])
-                        batch_ohlcv = st.session_state.get("batch_ohlcv", {})
-                        batch_h1 = st.session_state.get("batch_h1", {})
-                        batch_daily = st.session_state.get("batch_daily", {})
-                        batch_weekly = st.session_state.get("batch_weekly", {})
-
-                        if not signals_df.empty:
-                            batch_signals.append(signals_df)
-                            batch_ohlcv.update(ohlcv_data)
-                            batch_h1.update(h1_data)
-                            batch_daily.update(daily_data)
-                            batch_weekly.update(weekly_data)
-                            st.session_state.batch_signals = batch_signals
-                            st.session_state.batch_ohlcv = batch_ohlcv
-                            st.session_state.batch_h1 = batch_h1
-                            st.session_state.batch_daily = batch_daily
-                            st.session_state.batch_weekly = batch_weekly
-
-                        total_signals = sum(len(s) for s in batch_signals)
-                        status_placeholder.success(f"Batch {current_batch + 1} done in {elapsed:.1f}s | Total signals: {total_signals}")
-
-                        st.session_state.current_batch = current_batch + 1
-
-                        if end_idx >= len(all_tickers):
-                            st.session_state.scanning = False
-                            st.balloons()
-                            if batch_signals:
-                                st.session_state.signals_df = pd.concat(batch_signals, ignore_index=True)
-                                st.session_state.ohlcv_data = batch_ohlcv
-                                st.session_state.h1_data = batch_h1
-                                st.session_state.daily_data = batch_daily
-                                st.session_state.weekly_data = batch_weekly
-                                st.session_state.scan_done = True
-                                # Auto-record signals to journal & check open trades
-                                signals_concat = pd.concat(batch_signals, ignore_index=True)
-                                try:
-                                    added = record_scan_signals(signals_concat)
-                                    if added:
-                                        check_open_trades()
-                                        _refresh_journal_state()
-                                except Exception:
-                                    pass
-                                st.success(f"Scan complete! Found {total_signals} signal(s)")
-                            else:
-                                st.session_state.signals_df = pd.DataFrame()
-                                st.session_state.scan_done = True
-                                st.info(f"Scan complete! No signals found for {len(tickers)} ticker(s)")
-                        else:
-                            remaining = len(all_tickers) - end_idx
-                            st.info(f"Click 'Next Batch' to continue ({remaining} tickers remaining)")
-                            
-            except Exception as e:
                 st.session_state.scanning = False
-                st.error(f"Error: {e}")
+                st.session_state.signals_df = signals_df
+                st.session_state.ohlcv_data = ohlcv_data
+                st.session_state.h1_data = h1_data
+                st.session_state.daily_data = daily_data
+                st.session_state.weekly_data = weekly_data
+                st.session_state.scan_done = True
+
+                if not signals_df.empty:
+                    total_signals = len(signals_df)
+                    try:
+                        added = record_scan_signals(signals_df)
+                        if added:
+                            check_open_trades()
+                            _refresh_journal_state()
+                    except Exception:
+                        pass
+                    st.balloons()
+                    st.success(f"Scan complete in {elapsed:.1f}s! Found {total_signals} signal(s)")
+                else:
+                    st.info(f"Scan complete in {elapsed:.1f}s! No signals found for {len(all_tickers)} ticker(s)")
+        except Exception as e:
+            st.session_state.scanning = False
+            st.error(f"Error: {e}")
 
     if st.session_state.signals_df is not None:
         if st.session_state.signals_df.empty:
