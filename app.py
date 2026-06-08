@@ -404,8 +404,32 @@ def scan_tickers(tickers: list, progress_bar, status_text=None) -> tuple:
     return pd.DataFrame(), ohlcv_data, h1_data, daily_data, weekly_data
 
 
+def _scan_one_ticker(ticker: str) -> Optional[pd.DataFrame]:
+    from scanner_base import get_index_type
+    try:
+        df_5m = fetch_ohlcv(ticker, interval="5m", period=DATA_PERIOD)
+        if df_5m is None or len(df_5m) < MIN_ROWS:
+            return None
+        df_daily = fetch_ohlcv(ticker, interval="1d", period="1y")
+        df_weekly = fetch_ohlcv(ticker, interval="1wk", period="5y")
+        df_h1 = fetch_ohlcv(ticker, interval="1h", period="21d")
+        cfg = Config.from_json()
+        if ticker in INDEX_TICKERS:
+            cfg.use_vol_filt = False
+        cfg.index_type = get_index_type(ticker)
+        _, signals = run_signals(df_5m, df_daily, cfg, df_weekly, df_h1=df_h1)
+        if signals is not None and not signals.empty:
+            signals["ticker"] = ticker_label(ticker)
+            signals["symbol"] = ticker
+            return signals
+    except Exception:
+        return None
+    return None
+
+
 def run_auto_scan():
     """Run scan silently and send new active trades to Telegram."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from scanner_base import get_index_type
     from trade_journal import load_journal, check_open_trades
     from telegram_notifier import send_message, format_trade_alert, already_sent, mark_sent
@@ -421,25 +445,12 @@ def run_auto_scan():
             pass
 
     all_signals = []
-    for ticker in all_tickers:
-        try:
-            df_5m = fetch_ohlcv(ticker, interval="5m", period=DATA_PERIOD)
-            if df_5m is None or len(df_5m) < MIN_ROWS:
-                continue
-            df_daily = fetch_ohlcv(ticker, interval="1d", period="1y")
-            df_weekly = fetch_ohlcv(ticker, interval="1wk", period="5y")
-            df_h1 = fetch_ohlcv(ticker, interval="1h", period="21d")
-            cfg = Config.from_json()
-            if ticker in INDEX_TICKERS:
-                cfg.use_vol_filt = False
-            cfg.index_type = get_index_type(ticker)
-            _, signals = run_signals(df_5m, df_daily, cfg, df_weekly, df_h1=df_h1)
-            if signals is not None and not signals.empty:
-                signals["ticker"] = ticker_label(ticker)
-                signals["symbol"] = ticker
-                all_signals.append(signals)
-        except Exception:
-            continue
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_scan_one_ticker, t): t for t in all_tickers}
+        for f in as_completed(futures):
+            sig = f.result()
+            if sig is not None:
+                all_signals.append(sig)
 
     if not all_signals:
         return
@@ -1236,32 +1247,37 @@ if main_tab == "Scanner":
     auto_on = st.sidebar.checkbox("🔄 Auto-Scan (every 15 min)", key="auto_scan_on",
                                   help="Automatically scans every 15 min during market hours (9:15-15:30 IST)")
     if auto_on:
-        last = st.session_state.get("auto_last_scan", None)
-        count = st.session_state.get("auto_scan_count", 0)
         now = datetime.now(IST)
         in_market = 9 * 60 + 15 <= now.hour * 60 + now.minute <= 15 * 60 + 30 and now.weekday() < 5
+        already_scanning = st.session_state.get("scanning", False)
+
+        last = st.session_state.get("auto_last_scan", None)
+        count = st.session_state.get("auto_scan_count", 0)
         if last:
             elapsed = (now - datetime.fromisoformat(last)).total_seconds()
             next_in = max(0, 900 - int(elapsed))
             st.sidebar.caption(f"Last scan: {last[-8:]} | Next: ~{next_in//60}m{next_in%60}s")
         st.sidebar.caption(f"Today's scans: {count}" + (" 🟢 Market open" if in_market else " 🔴 Market closed"))
+        if already_scanning:
+            st.sidebar.warning("⏳ Scan in progress...", icon=False)
 
-        last_scan = st.session_state.get("auto_last_scan_dt", None)
-        should_scan = False
-        if last_scan is None:
-            should_scan = True
-        else:
-            elapsed = (datetime.now() - last_scan).total_seconds()
-            if elapsed >= 900:
+        if not already_scanning:
+            last_scan = st.session_state.get("auto_last_scan_dt", None)
+            should_scan = False
+            if last_scan is None:
                 should_scan = True
+            else:
+                elapsed = (datetime.now() - last_scan).total_seconds()
+                if elapsed >= 900:
+                    should_scan = True
 
-        if should_scan and in_market:
-            st.session_state.auto_last_scan_dt = datetime.now()
-            st.session_state.auto_last_scan = datetime.now(IST).isoformat()
-            st.session_state.auto_scan_count = st.session_state.get("auto_scan_count", 0) + 1
-            run_auto_scan()
+            if should_scan and in_market:
+                st.session_state.auto_last_scan_dt = datetime.now()
+                st.session_state.auto_last_scan = datetime.now(IST).isoformat()
+                st.session_state.auto_scan_count = st.session_state.get("auto_scan_count", 0) + 1
+                run_auto_scan()
 
-        st_autorefresh(interval=900000, key="auto_refresh")
+        st_autorefresh(interval=1800000, key="auto_refresh")
     
     if cancel_button:
         st.session_state.scan_cancelled = True
