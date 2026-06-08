@@ -269,7 +269,7 @@ def apply_daily_limits(results: list, cfg: Config) -> list:
 
     df = pd.DataFrame(results)
     df["date"] = df["signal_dt"].apply(
-        lambda x: x.date() if hasattr(x, 'date') else x.date()
+        lambda x: x.date() if hasattr(x, 'date') else x
     )
 
     filtered = []

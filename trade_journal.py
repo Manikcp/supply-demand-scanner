@@ -60,9 +60,9 @@ def save_journal(records: List[dict]):
 def add_trade(alert: dict):
     records = load_journal()
     # dedup by ticker + type + entry_time
-    key = (alert["ticker"], alert["type"], alert["datetime"])
+    key = (alert["ticker"], alert["type"], str(alert["datetime"]))
     for r in records:
-        if (r["ticker"], r["type"], r["entry_time"]) == key:
+        if (r.get("ticker", ""), r.get("trade_type", ""), r.get("entry_time", "")) == key:
             return  # already recorded
     records.append({
         "ticker": alert["ticker"],

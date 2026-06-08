@@ -136,6 +136,9 @@ def make_config(ticker: str, base_cfg: Optional[Config] = None) -> Config:
             require_trend_factor=base_cfg.require_trend_factor,
             block_opening_session=base_cfg.block_opening_session,
             dedup_bar_cooldown=base_cfg.dedup_bar_cooldown,
+            use_h1_zones=base_cfg.use_h1_zones,
+            body_based_zones=base_cfg.body_based_zones,
+            next_bar_entry=base_cfg.next_bar_entry,
         )
 
     if ticker in INDEX_TICKERS:
@@ -204,9 +207,6 @@ def fetch_ohlcv(
             if attempt == max_retries - 1:
                 return None
             time.sleep(2 ** attempt)
-    if raw is None or raw.empty:
-        return None
-
     if raw is None or raw.empty:
         return None
 

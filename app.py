@@ -130,7 +130,8 @@ def cross_ref_outcome(signals_df):
         tt = t.get("trade_type", "")
         status = t.get("status", "")
         if ticker and tt and status in ("hit_target", "hit_sl"):
-            status_map[(ticker, tt)] = status
+            normalized = "target_hit" if status == "hit_target" else "sl_hit"
+            status_map[(ticker, tt)] = normalized
     if "outcome" not in signals_df.columns:
         signals_df["outcome"] = "pending"
     for i, row in signals_df.iterrows():
@@ -1929,10 +1930,13 @@ elif main_tab == "Journal":
     # ── Log New Trade ──
     st.markdown('<div class="journal-card"><h3>📝 LOG NEW TRADE</h3>', unsafe_allow_html=True)
     with st.form("journal_form", clear_on_submit=True):
-        _all_tickers = sorted(set(
-            list(pd.read_csv("indices_tikcers.csv")["ticker"]) +
-            list(pd.read_csv("fno_tickers.csv")["ticker"])
-        ))
+        try:
+            _all_tickers = sorted(set(
+                list(pd.read_csv("indices_tikcers.csv")["ticker"]) +
+                list(pd.read_csv("fno_tickers.csv")["ticker"])
+            ))
+        except Exception:
+            _all_tickers = []
         r1a, r1b = st.columns([1, 1])
         with r1a:
             jt_ticker = st.selectbox("Ticker", _all_tickers, index=None, placeholder="Select ticker...")
@@ -1951,6 +1955,9 @@ elif main_tab == "Journal":
         with r3b:
             jt_notes = st.text_area("Notes", placeholder="e.g. pattern, trade rationale...", height=60)
         if st.form_submit_button("Save Trade", use_container_width=True, type="primary"):
+            if not jt_ticker:
+                st.error("Please select a ticker")
+                st.stop()
             ticker_name = jt_ticker.upper()
             is_ce = "CE" in jt_type
             entry_val = jt_entry or 0
@@ -1992,7 +1999,7 @@ elif main_tab == "Journal":
                     _json.dump(existing, _f, indent=2)
             except Exception:
                 pass
-            st.success(f"Trade saved as {selected_result}!")
+            st.success(f"Trade saved as {jt_result}!")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Trade History ──
