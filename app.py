@@ -444,13 +444,21 @@ def run_auto_scan():
         except Exception:
             pass
 
+    n = len(all_tickers)
+    status = st.sidebar.empty()
+    bar = st.sidebar.progress(0, text=f"Auto-scan: 0/{n} tickers")
+
     all_signals = []
     with ThreadPoolExecutor(max_workers=5) as pool:
         futures = {pool.submit(_scan_one_ticker, t): t for t in all_tickers}
-        for f in as_completed(futures):
+        for i, f in enumerate(as_completed(futures), 1):
             sig = f.result()
             if sig is not None:
                 all_signals.append(sig)
+            bar.progress(i / n, text=f"Auto-scan: {i}/{n} tickers")
+
+    bar.empty()
+    status.success(f"✅ Auto-scan done: {len(all_signals)} signals")
 
     if not all_signals:
         return
@@ -472,7 +480,7 @@ def run_auto_scan():
             sent += 1
 
     if sent:
-        print(f"[AutoScan] Sent {sent} new trade(s) to Telegram")
+        status.success(f"✅ Auto-scan done: {len(all_signals)} signals, {sent} sent to Telegram")
 
 
 def _find_pivots(series: pd.Series, window: int = 5):
