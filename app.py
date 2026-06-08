@@ -1317,10 +1317,9 @@ if main_tab == "Scanner":
                 if not signals_df.empty:
                     total_signals = len(signals_df)
                     try:
-                        added = record_scan_signals(signals_df)
-                        if added:
-                            check_open_trades()
-                            _refresh_journal_state()
+                        record_scan_signals(signals_df)
+                        check_open_trades()
+                        _refresh_journal_state()
                     except Exception:
                         pass
                     st.balloons()
