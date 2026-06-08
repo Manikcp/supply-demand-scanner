@@ -458,16 +458,19 @@ def run_auto_scan():
             bar.progress(i / n, text=f"Auto-scan: {i}/{n} tickers")
 
     bar.empty()
-    status.success(f"✅ Auto-scan done: {len(all_signals)} signals")
 
     if not all_signals:
+        _refresh_journal_state()
+        status.success("✅ Auto-scan done: 0 signals")
         return
 
     signals_df = pd.concat(all_signals, ignore_index=True)
     record_scan_signals(signals_df)
     check_open_trades()
+    _refresh_journal_state()
 
     journal = load_journal()
+
     sent = 0
     for t in journal:
         if t.get("status") != "open":
