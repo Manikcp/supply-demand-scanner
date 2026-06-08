@@ -1261,7 +1261,7 @@ if main_tab == "Scanner":
             st.session_state.auto_scan_count = st.session_state.get("auto_scan_count", 0) + 1
             run_auto_scan()
 
-        st_autorefresh(interval=60000, key="auto_refresh")
+        st_autorefresh(interval=900000, key="auto_refresh")
     
     if cancel_button:
         st.session_state.scan_cancelled = True
