@@ -5,4 +5,3 @@ __pycache__/
 data_cache/
 data/
 .streamlit/
-sent_trades.json
