@@ -429,7 +429,6 @@ def _scan_one_ticker(ticker: str) -> Optional[pd.DataFrame]:
 
 def run_auto_scan():
     """Run scan silently and send new active trades to Telegram."""
-    from concurrent.futures import ThreadPoolExecutor, as_completed
     from scanner_base import get_index_type
     from trade_journal import load_journal, check_open_trades
     from telegram_notifier import send_message, format_trade_alert, already_sent, mark_sent
@@ -449,13 +448,11 @@ def run_auto_scan():
     bar = st.sidebar.progress(0, text=f"Auto-scan: 0/{n} tickers")
 
     all_signals = []
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        futures = {pool.submit(_scan_one_ticker, t): t for t in all_tickers}
-        for i, f in enumerate(as_completed(futures), 1):
-            sig = f.result()
-            if sig is not None:
-                all_signals.append(sig)
-            bar.progress(i / n, text=f"Auto-scan: {i}/{n} tickers")
+    for i, ticker in enumerate(all_tickers, 1):
+        sig = _scan_one_ticker(ticker)
+        if sig is not None:
+            all_signals.append(sig)
+        bar.progress(i / n, text=f"Auto-scan: {i}/{n} tickers")
 
     bar.empty()
 
